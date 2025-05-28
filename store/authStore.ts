@@ -48,8 +48,17 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // Get current session
-          const { data: { session }, error } = await supabase.auth.getSession();
+          // Add timeout to prevent hanging
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Auth initialization timeout')), 10000)
+          );
+          
+          const authPromise = supabase.auth.getSession();
+          
+          const { data: { session }, error } = await Promise.race([
+            authPromise,
+            timeoutPromise
+          ]) as any;
           
           if (error) {
             console.error('Session error:', error);
@@ -59,28 +68,51 @@ export const useAuthStore = create<AuthState>()(
           if (session) {
             const { user } = session;
             
-            // Fetch user profile
-            const { data: profile, error: profileError } = await supabase
+            // Fetch user profile with timeout
+            const profilePromise = supabase
               .from('profiles')
               .select('*')
               .eq('id', user.id)
               .single();
             
-            if (profileError && profileError.code !== 'PGRST116') {
-              console.error('Profile error:', profileError);
-              // Don't throw here either, create a basic profile
-            }
+            const profileTimeoutPromise = new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
+            );
             
-            set({ 
-              session, 
-              user, 
-              profile: profile || { 
-                id: user.id, 
-                email: user.email || '',
-                has_completed_setup: false
-              },
-              isInitialized: true
-            });
+            try {
+              const { data: profile, error: profileError } = await Promise.race([
+                profilePromise,
+                profileTimeoutPromise
+              ]) as any;
+              
+              if (profileError && profileError.code !== 'PGRST116') {
+                console.error('Profile error:', profileError);
+                // Don't throw here either, create a basic profile
+              }
+              
+              set({ 
+                session, 
+                user, 
+                profile: profile || { 
+                  id: user.id, 
+                  email: user.email || '',
+                  has_completed_setup: false
+                },
+                isInitialized: true
+              });
+            } catch (profileError) {
+              console.error('Profile fetch failed:', profileError);
+              set({ 
+                session, 
+                user, 
+                profile: { 
+                  id: user.id, 
+                  email: user.email || '',
+                  has_completed_setup: false
+                },
+                isInitialized: true
+              });
+            }
           } else {
             set({ 
               session: null, 
@@ -97,33 +129,58 @@ export const useAuthStore = create<AuthState>()(
             if (event === 'SIGNED_IN' && session) {
               const { user } = session;
               
-              // Fetch user profile
-              const { data: profile, error: profileError } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', user.id)
-                .single();
-              
-              if (profileError && profileError.code !== 'PGRST116') {
-                console.error('Profile fetch error:', profileError);
+              // Fetch user profile with timeout
+              try {
+                const profilePromise = supabase
+                  .from('profiles')
+                  .select('*')
+                  .eq('id', user.id)
+                  .single();
+                
+                const profileTimeoutPromise = new Promise((_, reject) => 
+                  setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
+                );
+                
+                const { data: profile, error: profileError } = await Promise.race([
+                  profilePromise,
+                  profileTimeoutPromise
+                ]) as any;
+                
+                if (profileError && profileError.code !== 'PGRST116') {
+                  console.error('Profile fetch error:', profileError);
+                }
+                
+                set({ 
+                  session, 
+                  user, 
+                  profile: profile || { 
+                    id: user.id, 
+                    email: user.email || '',
+                    has_completed_setup: false
+                  } 
+                });
+              } catch (error) {
+                console.error('Profile fetch failed in auth listener:', error);
+                set({ 
+                  session, 
+                  user, 
+                  profile: { 
+                    id: user.id, 
+                    email: user.email || '',
+                    has_completed_setup: false
+                  } 
+                });
               }
-              
-              set({ 
-                session, 
-                user, 
-                profile: profile || { 
-                  id: user.id, 
-                  email: user.email || '',
-                  has_completed_setup: false
-                } 
-              });
             } else if (event === 'SIGNED_OUT') {
               set({ session: null, user: null, profile: null });
             }
           });
         } catch (error: any) {
           console.error('Auth initialization error:', error);
-          set({ error: error.message, isInitialized: true });
+          set({ 
+            error: 'Failed to initialize authentication. Please try again.',
+            isInitialized: true 
+          });
         } finally {
           set({ isLoading: false });
         }
@@ -145,25 +202,38 @@ export const useAuthStore = create<AuthState>()(
           const { session, user } = data;
           
           // Fetch user profile
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single();
-          
-          if (profileError && profileError.code !== 'PGRST116') {
-            console.error('Profile fetch error:', profileError);
+          try {
+            const { data: profile, error: profileError } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', user.id)
+              .single();
+            
+            if (profileError && profileError.code !== 'PGRST116') {
+              console.error('Profile fetch error:', profileError);
+            }
+            
+            set({ 
+              session, 
+              user, 
+              profile: profile || { 
+                id: user.id, 
+                email: user.email || '',
+                has_completed_setup: false
+              } 
+            });
+          } catch (profileError) {
+            console.error('Profile fetch failed:', profileError);
+            set({ 
+              session, 
+              user, 
+              profile: { 
+                id: user.id, 
+                email: user.email || '',
+                has_completed_setup: false
+              } 
+            });
           }
-          
-          set({ 
-            session, 
-            user, 
-            profile: profile || { 
-              id: user.id, 
-              email: user.email || '',
-              has_completed_setup: false
-            } 
-          });
         } catch (error: any) {
           console.error('Sign in error:', error);
           set({ error: error.message });
@@ -214,19 +284,23 @@ export const useAuthStore = create<AuthState>()(
           
           if (user) {
             // Create initial profile
-            const { error: profileError } = await supabase
-              .from('profiles')
-              .insert([
-                { 
-                  id: user.id, 
-                  email: user.email,
-                  has_completed_setup: false
-                }
-              ]);
-            
-            if (profileError) {
-              console.error('Profile creation error:', profileError);
-              // Don't throw, just log
+            try {
+              const { error: profileError } = await supabase
+                .from('profiles')
+                .insert([
+                  { 
+                    id: user.id, 
+                    email: user.email,
+                    has_completed_setup: false
+                  }
+                ]);
+              
+              if (profileError) {
+                console.error('Profile creation error:', profileError);
+                // Don't throw, just log
+              }
+            } catch (profileError) {
+              console.error('Profile creation failed:', profileError);
             }
             
             set({ 

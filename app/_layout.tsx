@@ -2,7 +2,7 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useFonts } from "expo-font";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Platform } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import colors from "@/constants/colors";
@@ -31,11 +31,29 @@ export default function RootLayout() {
   });
 
   const { initialize } = useAuthStore();
+  const [initStarted, setInitStarted] = useState(false);
 
   useEffect(() => {
-    // Initialize auth state
-    initialize().catch(console.error);
-  }, []);
+    // Initialize auth state with timeout protection
+    if (!initStarted) {
+      setInitStarted(true);
+      const initAuth = async () => {
+        try {
+          await Promise.race([
+            initialize(),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Auth init timeout')), 15000)
+            )
+          ]);
+        } catch (error) {
+          console.error('Auth initialization failed:', error);
+          // Continue anyway - app should still work without auth
+        }
+      };
+      
+      initAuth();
+    }
+  }, [initStarted]);
 
   useEffect(() => {
     if (error) {

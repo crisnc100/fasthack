@@ -5,12 +5,11 @@ import { Eye, EyeOff } from 'lucide-react-native';
 import colors from '@/constants/colors';
 import { validateEmail, validatePassword } from '@/utils/validation';
 import { useAuthStore } from '@/store/authStore';
-import { getGoogleAuthFunction } from '@/lib/googleAuth';
 import SocialLoginButton from './SocialLoginButton';
 
 export default function LoginForm() {
   const router = useRouter();
-  const { signIn, isLoading, error, resetError } = useAuthStore();
+  const { signIn, signInWithGoogle, isLoading, error, resetError } = useAuthStore();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -56,16 +55,7 @@ export default function LoginForm() {
     resetError();
     
     try {
-      const googleAuth = getGoogleAuthFunction();
-      const result = await googleAuth();
-      
-      if (result.error) {
-        console.error('Google sign in error:', result.error);
-        // You might want to show this error to the user
-      } else if (result.data) {
-        // Success - for OAuth flow, the session will be handled by auth state listener
-        console.log('Google sign in initiated successfully');
-      }
+      await signInWithGoogle();
     } catch (error: any) {
       console.error('Google sign in error:', error);
     } finally {
