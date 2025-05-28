@@ -46,8 +46,10 @@ export const signInWithGoogleMobile = async () => {
       revocationEndpoint: 'https://oauth2.googleapis.com/revoke',
     };
 
+    const clientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '209139657307-inmk9n77std92ceo573g59bpqv2brfjr.apps.googleusercontent.com';
+
     const request = new AuthSession.AuthRequest({
-      clientId: '209139657307-inmk9n77std92ceo573g59bpqv2brfjr.apps.googleusercontent.com',
+      clientId,
       scopes: ['openid', 'profile', 'email'],
       redirectUri,
       responseType: AuthSession.ResponseType.Code,

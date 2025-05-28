@@ -162,6 +162,13 @@ function RootLayoutNav() {
           gestureEnabled: false,
         }} 
       />
+      <Stack.Screen 
+        name="auth/callback" 
+        options={{ 
+          headerShown: false,
+          animation: 'fade',
+        }} 
+      />
     </Stack>
   );
 }

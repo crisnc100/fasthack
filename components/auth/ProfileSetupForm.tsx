@@ -58,13 +58,13 @@ export default function ProfileSetupForm() {
         }
         
         // Get public URL
-        const { data: { publicUrl } } = supabase.storage
+        const { data: urlData } = supabase.storage
           .from('avatars')
           .getPublicUrl(data.path);
         
         // Fix: Properly handle the publicUrl which can be string or null
-        if (publicUrl) {
-          setAvatarUrl(publicUrl);
+        if (urlData?.publicUrl) {
+          setAvatarUrl(urlData.publicUrl);
         }
       }
     } catch (error) {
