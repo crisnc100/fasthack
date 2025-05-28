@@ -1,0 +1,167 @@
+import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { useFonts } from "expo-font";
+import { Stack, useRouter, useSegments } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
+import { useEffect } from "react";
+import { Platform } from "react-native";
+import { StatusBar } from "expo-status-bar";
+import colors from "@/constants/colors";
+
+import { ErrorBoundary } from "./error-boundary";
+
+// tRPC and React Query setup
+import { trpc, trpcClient } from "@/lib/trpc";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useAuthStore } from "@/store/authStore";
+
+export const unstable_settings = {
+  // Ensure that reloading on `/modal` keeps a back button present.
+  initialRouteName: "(tabs)",
+};
+
+// Create a client for React Query
+const queryClient = new QueryClient();
+
+// Prevent the splash screen from auto-hiding before asset loading is complete.
+SplashScreen.preventAutoHideAsync();
+
+export default function RootLayout() {
+  const [loaded, error] = useFonts({
+    ...FontAwesome.font,
+  });
+
+  const { initialize } = useAuthStore();
+
+  useEffect(() => {
+    // Initialize auth state
+    initialize().catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    if (error) {
+      console.error(error);
+      throw error;
+    }
+  }, [error]);
+
+  useEffect(() => {
+    if (loaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [loaded]);
+
+  if (!loaded) {
+    return null;
+  }
+
+  return (
+    <ErrorBoundary>
+      <trpc.Provider client={trpcClient} queryClient={queryClient}>
+        <QueryClientProvider client={queryClient}>
+          <StatusBar style="dark" />
+          <RootLayoutNav />
+        </QueryClientProvider>
+      </trpc.Provider>
+    </ErrorBoundary>
+  );
+}
+
+function RootLayoutNav() {
+  const router = useRouter();
+  const segments = useSegments();
+  const { session, profile, isLoading, isInitialized } = useAuthStore();
+
+  // Handle auth state changes
+  useEffect(() => {
+    // Wait for auth to be initialized
+    if (!isInitialized) return;
+    
+    // Don't redirect while loading
+    if (isLoading) return;
+
+    const inAuthGroup = segments[0] === 'auth';
+    
+    console.log('Auth state:', { 
+      hasSession: !!session, 
+      hasProfile: !!profile, 
+      profileSetupComplete: profile?.has_completed_setup,
+      inAuthGroup,
+      segments 
+    });
+    
+    if (!session && !inAuthGroup) {
+      // Redirect to login if not authenticated
+      console.log('Redirecting to login - no session');
+      router.replace('/auth/login');
+    } else if (session && inAuthGroup && profile?.has_completed_setup) {
+      // Redirect to home if authenticated and profile is complete
+      console.log('Redirecting to home - authenticated with complete profile');
+      router.replace('/');
+    } else if (session && profile && !profile.has_completed_setup && segments[0] !== 'auth') {
+      // Redirect to profile setup if authenticated but profile not complete
+      console.log('Redirecting to profile setup - incomplete profile');
+      router.replace('/auth/profile-setup');
+    }
+  }, [session, profile, segments, isLoading, isInitialized]);
+
+  return (
+    <Stack
+      screenOptions={{
+        headerBackTitle: "Back",
+        headerStyle: {
+          backgroundColor: colors.background,
+        },
+        headerShadowVisible: false,
+        headerTintColor: colors.primary,
+        contentStyle: {
+          backgroundColor: colors.background,
+        },
+      }}
+    >
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen 
+        name="meal/[id]" 
+        options={{ 
+          title: "Meal Details",
+          presentation: "card",
+        }} 
+      />
+      <Stack.Screen 
+        name="restaurant/[id]" 
+        options={{ 
+          title: "Restaurant",
+          presentation: "card",
+        }} 
+      />
+      <Stack.Screen 
+        name="premium" 
+        options={{ 
+          title: "Premium",
+          presentation: "modal",
+        }} 
+      />
+      <Stack.Screen 
+        name="auth/login" 
+        options={{ 
+          headerShown: false,
+          animation: 'fade',
+        }} 
+      />
+      <Stack.Screen 
+        name="auth/register" 
+        options={{ 
+          headerShown: false,
+          animation: 'fade',
+        }} 
+      />
+      <Stack.Screen 
+        name="auth/profile-setup" 
+        options={{ 
+          headerShown: false,
+          animation: 'fade',
+          gestureEnabled: false,
+        }} 
+      />
+    </Stack>
+  );
+}
