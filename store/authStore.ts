@@ -1,12 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as AuthSession from 'expo-auth-session';
-import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
-
-// Complete the auth session for web
-WebBrowser.maybeCompleteAuthSession();
 
 export interface UserProfile {
   id: string;
@@ -35,8 +30,19 @@ interface AuthState {
   resetError: () => void;
 }
 
-// Google OAuth configuration
-const googleClientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || 'your-google-client-id';
+// Mock user database for demo purposes
+const mockUsers = [
+  {
+    email: 'demo@example.com',
+    password: 'password123',
+    profile: {
+      id: 'demo_user_1',
+      email: 'demo@example.com',
+      full_name: 'Demo User',
+      has_completed_setup: true,
+    }
+  }
+];
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -79,23 +85,42 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // Mock authentication - in a real app, this would call your backend
+          // Simulate network delay
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Check mock users first
+          const mockUser = mockUsers.find(u => u.email === email && u.password === password);
+          
+          if (mockUser) {
+            const session = {
+              user: {
+                id: mockUser.profile.id,
+                email: mockUser.profile.email,
+              }
+            };
+            
+            set({ session, profile: mockUser.profile });
+            console.log('Sign in successful for:', email);
+            return;
+          }
+          
+          // For any other email/password combination, create a new user
           if (email && password.length >= 6) {
-            const mockSession = {
+            const session = {
               user: {
                 id: `user_${Date.now()}`,
                 email: email,
               }
             };
             
-            const mockProfile: UserProfile = {
-              id: mockSession.user.id,
+            const profile: UserProfile = {
+              id: session.user.id,
               email: email,
               full_name: email.split('@')[0],
               has_completed_setup: true,
             };
             
-            set({ session: mockSession, profile: mockProfile });
+            set({ session, profile });
             console.log('Sign in successful for:', email);
           } else {
             throw new Error('Invalid email or password');
@@ -112,23 +137,25 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // Mock sign up - in a real app, this would call your backend
+          // Simulate network delay
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
           if (email && password.length >= 6) {
-            const mockSession = {
+            const session = {
               user: {
                 id: `user_${Date.now()}`,
                 email: email,
               }
             };
             
-            const mockProfile: UserProfile = {
-              id: mockSession.user.id,
+            const profile: UserProfile = {
+              id: session.user.id,
               email: email,
               full_name: email.split('@')[0],
               has_completed_setup: false, // New users need to complete setup
             };
             
-            set({ session: mockSession, profile: mockProfile });
+            set({ session, profile });
             console.log('Sign up successful for:', email);
           } else {
             throw new Error('Invalid email or password');
@@ -145,54 +172,27 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         
         try {
-          if (Platform.OS === 'web') {
-            // For web, use a simple redirect flow
-            const redirectUri = `${window.location.origin}/auth/callback`;
-            const authUrl = `https://accounts.google.com/oauth/authorize?client_id=${googleClientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=email%20profile`;
-            
-            window.location.href = authUrl;
-            return;
-          }
+          // Simulate network delay
+          await new Promise(resolve => setTimeout(resolve, 1500));
           
-          // For mobile, use expo-auth-session
-          const redirectUri = AuthSession.makeRedirectUri({
-            scheme: 'fasthack',
-            path: 'auth/callback',
-          });
-          
-          const request = new AuthSession.AuthRequest({
-            clientId: googleClientId,
-            scopes: ['openid', 'profile', 'email'],
-            redirectUri,
-            responseType: AuthSession.ResponseType.Code,
-          });
-          
-          const result = await request.promptAsync({
-            authorizationEndpoint: 'https://accounts.google.com/oauth/authorize',
-          });
-          
-          if (result.type === 'success') {
-            // Mock Google user data - in a real app, you'd exchange the code for user info
-            const mockSession = {
-              user: {
-                id: `google_user_${Date.now()}`,
-                email: 'user@gmail.com',
-              }
-            };
-            
-            const mockProfile: UserProfile = {
-              id: mockSession.user.id,
+          // Mock Google authentication
+          const session = {
+            user: {
+              id: `google_user_${Date.now()}`,
               email: 'user@gmail.com',
-              full_name: 'Google User',
-              avatar_url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80',
-              has_completed_setup: false,
-            };
-            
-            set({ session: mockSession, profile: mockProfile });
-            console.log('Google sign in successful');
-          } else {
-            throw new Error('Google sign in was cancelled');
-          }
+            }
+          };
+          
+          const profile: UserProfile = {
+            id: session.user.id,
+            email: 'user@gmail.com',
+            full_name: 'Google User',
+            avatar_url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80',
+            has_completed_setup: false,
+          };
+          
+          set({ session, profile });
+          console.log('Google sign in successful');
         } catch (error: any) {
           console.error('Google sign in error:', error);
           set({ error: error.message || 'Failed to sign in with Google' });
@@ -205,6 +205,9 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         
         try {
+          // Simulate network delay
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
           set({ session: null, profile: null });
           console.log('Sign out successful');
         } catch (error: any) {
@@ -219,6 +222,9 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         
         try {
+          // Simulate network delay
+          await new Promise(resolve => setTimeout(resolve, 800));
+          
           const currentState = get();
           if (!currentState.session) {
             throw new Error('User not authenticated');

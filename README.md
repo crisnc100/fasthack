@@ -8,7 +8,7 @@ A React Native app built with Expo that helps users find healthier options at fa
 - 📍 Location-based restaurant recommendations
 - 🏷️ Dietary preference filtering (Keto, Low-carb, High-protein, etc.)
 - ❤️ Save favorite meals
-- 👤 User authentication with Google OAuth
+- 👤 Simple authentication system with mock Google OAuth
 - 💎 Premium features for advanced filtering
 
 ## Tech Stack
@@ -16,7 +16,7 @@ A React Native app built with Expo that helps users find healthier options at fa
 - **Frontend**: React Native with Expo
 - **Backend**: tRPC with Hono
 - **State Management**: Zustand
-- **Authentication**: Google OAuth with expo-auth-session
+- **Authentication**: Mock authentication system (no external dependencies)
 - **Styling**: React Native StyleSheet
 - **Icons**: Lucide React Native
 
@@ -36,19 +36,7 @@ A React Native app built with Expo that helps users find healthier options at fa
    npm install
    ```
 
-3. Set up environment variables:
-   ```bash
-   cp .env.example .env
-   ```
-   
-4. Configure Google OAuth:
-   - Go to [Google Cloud Console](https://console.cloud.google.com/)
-   - Create a new project or select existing one
-   - Enable Google+ API
-   - Create OAuth 2.0 credentials
-   - Add your client ID to `.env` file
-
-5. Start the development server:
+3. Start the development server:
    ```bash
    npm start
    ```
@@ -59,6 +47,22 @@ A React Native app built with Expo that helps users find healthier options at fa
 - **iOS**: Press `i` to open iOS Simulator
 - **Android**: Press `a` to open Android Emulator
 - **Physical Device**: Scan the QR code with Expo Go app
+
+## Authentication
+
+The app uses a simplified mock authentication system:
+
+### Demo Credentials
+- **Email**: `demo@example.com`
+- **Password**: `password123`
+
+### Features
+- Email/password authentication (mock implementation)
+- Google OAuth simulation (no external setup required)
+- Profile setup flow for new users
+- Persistent sessions with AsyncStorage
+
+Any email/password combination will work for testing, but the demo credentials above will give you a pre-configured user.
 
 ## Project Structure
 
@@ -76,14 +80,6 @@ A React Native app built with Expo that helps users find healthier options at fa
 ├── types/                 # TypeScript types
 └── utils/                 # Utility functions
 ```
-
-## Authentication
-
-The app uses a simplified authentication system with:
-- Email/password authentication (mock implementation)
-- Google OAuth integration
-- Profile setup flow for new users
-- Persistent sessions with AsyncStorage
 
 ## Backend
 
