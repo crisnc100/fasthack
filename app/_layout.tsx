@@ -126,7 +126,7 @@ function RootLayoutNav() {
         // Redirect to home if authenticated and profile is complete
         console.log('Redirecting to home - authenticated with complete profile');
         router.replace('/');
-      } else if (session && profile && !profile.has_completed_setup && !currentRoute.includes('profile-setup')) {
+      } else if (session && profile && !profile.has_completed_setup && currentRoute !== 'auth/profile-setup') {
         console.log('Redirecting to profile setup - incomplete profile');
         router.replace('/auth/profile-setup');
       }

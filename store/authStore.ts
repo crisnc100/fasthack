@@ -148,7 +148,7 @@ export const useAuthStore = create<AuthState>()(
           if (Platform.OS === 'web') {
             // For web, use a simple redirect flow
             const redirectUri = `${window.location.origin}/auth/callback`;
-            const authUrl = `https://accounts.google.com/oauth/authorize?client_id=${googleClientId}&redirect_uri=${redirectUri}&response_type=code&scope=email profile`;
+            const authUrl = `https://accounts.google.com/oauth/authorize?client_id=${googleClientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=email%20profile`;
             
             window.location.href = authUrl;
             return;
