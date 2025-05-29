@@ -49,11 +49,11 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // Get initial session with shorter timeout
+          // Get initial session with timeout
           const { data: { session }, error: sessionError } = await Promise.race([
             supabase.auth.getSession(),
             new Promise<any>((_, reject) => 
-              setTimeout(() => reject(new Error('Session timeout')), 5000)
+              setTimeout(() => reject(new Error('Session timeout')), 8000)
             )
           ]);
           
@@ -73,7 +73,7 @@ export const useAuthStore = create<AuthState>()(
                   .eq('id', session.user.id)
                   .single(),
                 new Promise<any>((_, reject) => 
-                  setTimeout(() => reject(new Error('Profile timeout')), 3000)
+                  setTimeout(() => reject(new Error('Profile timeout')), 5000)
                 )
               ]);
               

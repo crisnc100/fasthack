@@ -71,7 +71,7 @@ export default function RegisterForm() {
     
     try {
       await signInWithGoogle();
-      // Note: OAuth flow will handle the redirect, no need to check session here
+      // OAuth flow will handle the redirect automatically
     } catch (error: any) {
       console.error('Google sign in error:', error);
     } finally {
