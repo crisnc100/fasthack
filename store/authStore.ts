@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 
 export interface UserProfile {
   id: string;
@@ -43,6 +44,35 @@ const mockUsers = [
     }
   }
 ];
+
+// Mock Google OAuth for demo purposes
+const mockGoogleAuth = async (): Promise<{ email: string; name: string; picture?: string }> => {
+  // Simulate opening browser and getting user consent
+  if (Platform.OS === 'web') {
+    // On web, we can simulate the OAuth flow
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve({
+          email: 'user@gmail.com',
+          name: 'Google User',
+          picture: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80'
+        });
+      }, 1500);
+    });
+  } else {
+    // On mobile, we could use expo-web-browser to open OAuth URL
+    // For demo purposes, we'll just return mock data
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve({
+          email: 'mobile.user@gmail.com',
+          name: 'Mobile Google User',
+          picture: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80'
+        });
+      }, 1500);
+    });
+  }
+};
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -172,27 +202,26 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // Simulate network delay
-          await new Promise(resolve => setTimeout(resolve, 1500));
+          // Use mock Google OAuth
+          const googleUser = await mockGoogleAuth();
           
-          // Mock Google authentication
           const session = {
             user: {
-              id: `google_user_${Date.now()}`,
-              email: 'user@gmail.com',
+              id: `google_${Date.now()}`,
+              email: googleUser.email,
             }
           };
           
           const profile: UserProfile = {
             id: session.user.id,
-            email: 'user@gmail.com',
-            full_name: 'Google User',
-            avatar_url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80',
-            has_completed_setup: false,
+            email: googleUser.email,
+            full_name: googleUser.name,
+            avatar_url: googleUser.picture,
+            has_completed_setup: false, // New users need to complete setup
           };
           
           set({ session, profile });
-          console.log('Google sign in successful');
+          console.log('Google sign in successful for:', googleUser.email);
         } catch (error: any) {
           console.error('Google sign in error:', error);
           set({ error: error.message || 'Failed to sign in with Google' });

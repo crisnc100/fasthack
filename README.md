@@ -8,7 +8,7 @@ A React Native app built with Expo that helps users find healthier options at fa
 - 📍 Location-based restaurant recommendations
 - 🏷️ Dietary preference filtering (Keto, Low-carb, High-protein, etc.)
 - ❤️ Save favorite meals
-- 👤 Simple authentication system with mock Google OAuth
+- 👤 Mock authentication system with Google OAuth simulation
 - 💎 Premium features for advanced filtering
 
 ## Tech Stack
@@ -50,7 +50,7 @@ A React Native app built with Expo that helps users find healthier options at fa
 
 ## Authentication
 
-The app uses a simplified mock authentication system:
+The app uses a simplified mock authentication system that simulates real OAuth flows:
 
 ### Demo Credentials
 - **Email**: `demo@example.com`
@@ -61,6 +61,12 @@ The app uses a simplified mock authentication system:
 - Google OAuth simulation (no external setup required)
 - Profile setup flow for new users
 - Persistent sessions with AsyncStorage
+
+### Google OAuth Simulation
+The "Continue with Google" button simulates a real OAuth flow:
+- On web: Returns a mock Google user after 1.5s delay
+- On mobile: Simulates mobile OAuth flow
+- No external configuration needed for testing
 
 Any email/password combination will work for testing, but the demo credentials above will give you a pre-configured user.
 
@@ -88,6 +94,15 @@ The app includes a tRPC backend that provides:
 - Restaurant information
 - Type-safe API calls
 - Fallback to mock data
+
+## Real Google OAuth Implementation
+
+To implement real Google OAuth:
+
+1. Set up Google OAuth credentials in Google Cloud Console
+2. Add the credentials to your environment variables
+3. Replace the mock `mockGoogleAuth` function in `store/authStore.ts` with real OAuth implementation using `expo-web-browser`
+4. Update the app.config.js with proper OAuth redirect URLs
 
 ## Contributing
 
