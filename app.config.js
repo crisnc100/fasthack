@@ -57,6 +57,12 @@ export default {
     ],
     experiments: {
       typedRoutes: true
+    },
+    extra: {
+      googleClientId: {
+        ios: "209139657307-inmk9n77std92ceo573g59bpqv2brfjr.apps.googleusercontent.com",
+        web: "209139657307-mhub0fq3afcfftess5enu2qrsvap34lp.apps.googleusercontent.com"
+      }
     }
   }
 };

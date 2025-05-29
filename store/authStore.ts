@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
+import { Platform } from 'react-native';
 
 export interface UserProfile {
   id: string;
@@ -183,10 +184,17 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         
         try {
+          const redirectUrl = Platform.select({
+            ios: 'fasthack://auth/callback',
+            android: 'fasthack://auth/callback',
+            web: `${window.location.origin}/auth/callback`,
+            default: 'fasthack://auth/callback'
+          });
+
           const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-              redirectTo: 'fasthack://auth/callback',
+              redirectTo: redirectUrl,
             },
           });
           
