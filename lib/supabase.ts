@@ -1,15 +1,27 @@
 import 'react-native-url-polyfill/auto';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
+import { Platform } from 'react-native';
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://dfvqegbhmuxatwadamom.supabase.co';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRmdnFlZ2JobXV4YXR3YWRhbW9tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYyMTUyNzksImV4cCI6MjA2MTc5MTI3OX0.Inb5OHerxZj3JGAM6S0AWVzcEkk5Wrgb7p4ZRPlRwmM';
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://your-project.supabase.co';
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'your-anon-key';
 
+// Create Supabase client with proper configuration for React Native
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: AsyncStorage,
+    // Use AsyncStorage for session persistence on mobile
+    storage: Platform.OS !== 'web' ? require('@react-native-async-storage/async-storage').default : undefined,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    detectSessionInUrl: Platform.OS === 'web',
   },
 });
+
+// Helper function to get redirect URL for OAuth
+export const getRedirectUrl = () => {
+  if (Platform.OS === 'web') {
+    return `${window.location.origin}/auth/callback`;
+  }
+  
+  // For mobile, use the app scheme
+  return 'fasthack://auth/callback';
+};

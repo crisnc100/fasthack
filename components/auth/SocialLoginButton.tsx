@@ -7,36 +7,52 @@ interface SocialLoginButtonProps {
   provider: 'google' | 'apple';
   onPress: () => void;
   isLoading?: boolean;
+  disabled?: boolean;
 }
 
 export default function SocialLoginButton({ 
   provider, 
   onPress, 
-  isLoading = false 
+  isLoading = false,
+  disabled = false
 }: SocialLoginButtonProps) {
   const iconUrl = provider === 'google' 
     ? 'https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg'
     : 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg';
   
   const label = provider === 'google' 
-    ? 'Continue with Google (Coming Soon)' 
-    : 'Continue with Apple (Coming Soon)';
+    ? 'Continue with Google' 
+    : 'Continue with Apple';
   
   return (
     <TouchableOpacity
-      style={[styles.button, styles.buttonDisabled]}
-      onPress={() => {}}
-      disabled={true}
+      style={[
+        styles.button, 
+        disabled && styles.buttonDisabled,
+        isLoading && styles.buttonLoading
+      ]}
+      onPress={onPress}
+      disabled={disabled || isLoading}
       activeOpacity={0.8}
     >
       <View style={styles.iconContainer}>
-        <Image
-          source={{ uri: iconUrl }}
-          style={styles.icon}
-          contentFit="contain"
-        />
+        {isLoading ? (
+          <ActivityIndicator size="small" color={colors.primary} />
+        ) : (
+          <Image
+            source={{ uri: iconUrl }}
+            style={styles.icon}
+            contentFit="contain"
+          />
+        )}
       </View>
-      <Text style={[styles.label, styles.labelDisabled]}>{label}</Text>
+      <Text style={[
+        styles.label, 
+        disabled && styles.labelDisabled,
+        isLoading && styles.labelLoading
+      ]}>
+        {isLoading ? 'Signing in...' : label}
+      </Text>
     </TouchableOpacity>
   );
 }
@@ -57,10 +73,15 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     opacity: 0.5,
   },
+  buttonLoading: {
+    opacity: 0.8,
+  },
   iconContainer: {
     width: 24,
     height: 24,
     marginRight: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   icon: {
     width: '100%',
@@ -73,5 +94,8 @@ const styles = StyleSheet.create({
   },
   labelDisabled: {
     color: colors.textLight,
+  },
+  labelLoading: {
+    color: colors.textSecondary,
   },
 });
