@@ -3,7 +3,6 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
-import { Platform } from 'react-native';
 
 export interface UserProfile {
   id: string;
@@ -26,7 +25,6 @@ interface AuthState {
   // Actions
   initialize: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
@@ -175,44 +173,6 @@ export const useAuthStore = create<AuthState>()(
         } catch (error: any) {
           console.error('Sign in error:', error);
           set({ error: error.message || 'Failed to sign in' });
-        } finally {
-          set({ isLoading: false });
-        }
-      },
-      
-      signInWithGoogle: async () => {
-        set({ isLoading: true, error: null });
-        
-        try {
-          // For now, let's disable Google OAuth to avoid the expo-auth-session issue
-          // and just show an error message
-          throw new Error('Google sign-in is temporarily unavailable. Please use email/password.');
-          
-          /* 
-          // This code is commented out to avoid expo-auth-session issues
-          const redirectUrl = Platform.select({
-            ios: 'fasthack://auth/callback',
-            android: 'fasthack://auth/callback',
-            web: `${window.location.origin}/auth/callback`,
-            default: 'fasthack://auth/callback'
-          });
-
-          const { error } = await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-              redirectTo: redirectUrl,
-            },
-          });
-          
-          if (error) {
-            throw error;
-          }
-          
-          console.log('Google OAuth initiated');
-          */
-        } catch (error: any) {
-          console.error('Google sign in error:', error);
-          set({ error: error.message || 'Failed to sign in with Google' });
         } finally {
           set({ isLoading: false });
         }

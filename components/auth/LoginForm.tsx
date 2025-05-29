@@ -9,14 +9,13 @@ import SocialLoginButton from './SocialLoginButton';
 
 export default function LoginForm() {
   const router = useRouter();
-  const { signIn, signInWithGoogle, isLoading, error, resetError } = useAuthStore();
+  const { signIn, isLoading, error, resetError } = useAuthStore();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [googleLoading, setGoogleLoading] = useState(false);
   
   const handleEmailChange = (text: string) => {
     setEmail(text);
@@ -48,20 +47,6 @@ export default function LoginForm() {
     
     // Submit form
     await signIn(email, password);
-  };
-  
-  const handleGoogleSignIn = async () => {
-    setGoogleLoading(true);
-    resetError();
-    
-    try {
-      await signInWithGoogle();
-      // OAuth flow will handle the redirect automatically
-    } catch (error: any) {
-      console.error('Google sign in error:', error);
-    } finally {
-      setGoogleLoading(false);
-    }
   };
   
   const navigateToRegister = () => {
@@ -120,7 +105,7 @@ export default function LoginForm() {
       <TouchableOpacity
         style={styles.loginButton}
         onPress={handleSubmit}
-        disabled={isLoading || googleLoading}
+        disabled={isLoading}
         activeOpacity={0.8}
       >
         {isLoading ? (
@@ -138,8 +123,8 @@ export default function LoginForm() {
       
       <SocialLoginButton
         provider="google"
-        onPress={handleGoogleSignIn}
-        isLoading={googleLoading}
+        onPress={() => {}}
+        isLoading={false}
       />
       
       <View style={styles.registerContainer}>

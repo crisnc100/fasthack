@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, Platform } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import colors from '@/constants/colors';
 
@@ -19,30 +19,24 @@ export default function SocialLoginButton({
     : 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg';
   
   const label = provider === 'google' 
-    ? 'Continue with Google' 
-    : 'Continue with Apple';
+    ? 'Continue with Google (Coming Soon)' 
+    : 'Continue with Apple (Coming Soon)';
   
   return (
     <TouchableOpacity
-      style={[styles.button, isLoading && styles.buttonDisabled]}
-      onPress={onPress}
-      disabled={isLoading}
+      style={[styles.button, styles.buttonDisabled]}
+      onPress={() => {}}
+      disabled={true}
       activeOpacity={0.8}
     >
-      {isLoading ? (
-        <ActivityIndicator size="small" color={colors.text} />
-      ) : (
-        <>
-          <View style={styles.iconContainer}>
-            <Image
-              source={{ uri: iconUrl }}
-              style={styles.icon}
-              contentFit="contain"
-            />
-          </View>
-          <Text style={styles.label}>{label}</Text>
-        </>
-      )}
+      <View style={styles.iconContainer}>
+        <Image
+          source={{ uri: iconUrl }}
+          style={styles.icon}
+          contentFit="contain"
+        />
+      </View>
+      <Text style={[styles.label, styles.labelDisabled]}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -61,7 +55,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   buttonDisabled: {
-    opacity: 0.6,
+    opacity: 0.5,
   },
   iconContainer: {
     width: 24,
@@ -76,5 +70,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     color: colors.text,
+  },
+  labelDisabled: {
+    color: colors.textLight,
   },
 });
