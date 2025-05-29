@@ -105,7 +105,7 @@ function RootLayoutNav() {
 
     const inAuthGroup = segments[0] === 'auth';
     // Fix: Safely access segments[1] with proper type checking
-    const currentAuthRoute = segments.length > 1 ? segments[1] as string : null;
+    const currentAuthRoute = segments.length > 1 && segments[1] ? String(segments[1]) : null;
     
     console.log('Auth routing check:', { 
       hasSession: !!session, 
