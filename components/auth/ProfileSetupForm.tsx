@@ -7,13 +7,12 @@ import { Camera, Check } from 'lucide-react-native';
 import colors from '@/constants/colors';
 import { validateName } from '@/utils/validation';
 import { useAuthStore } from '@/store/authStore';
-import { supabase } from '@/lib/supabase';
 import { dietaryTags } from '@/constants/tags';
 import restaurants from '@/mocks/restaurants';
 
 export default function ProfileSetupForm() {
   const router = useRouter();
-  const { user, updateProfile, isLoading, error } = useAuthStore();
+  const { updateProfile, isLoading, error } = useAuthStore();
   
   const [name, setName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined);
@@ -39,37 +38,13 @@ export default function ProfileSetupForm() {
       if (!result.canceled && result.assets && result.assets.length > 0) {
         setUploadingImage(true);
         
-        const file = {
-          uri: result.assets[0].uri,
-          name: `avatar-${user?.id}-${Date.now()}.jpg`,
-          type: 'image/jpeg',
-        };
-        
-        // Upload to Supabase Storage
-        const { data, error } = await supabase.storage
-          .from('avatars')
-          .upload(file.name, file as any, {
-            contentType: 'image/jpeg',
-            upsert: true,
-          });
-        
-        if (error) {
-          throw error;
-        }
-        
-        // Get public URL
-        const { data: urlData } = supabase.storage
-          .from('avatars')
-          .getPublicUrl(data.path);
-        
-        // Fix: Properly handle the publicUrl which can be string or null
-        if (urlData?.publicUrl) {
-          setAvatarUrl(urlData.publicUrl);
-        }
+        // For demo purposes, just use the local URI
+        // In a real app, you would upload this to your server
+        setAvatarUrl(result.assets[0].uri);
+        setUploadingImage(false);
       }
     } catch (error) {
-      console.error('Error uploading image:', error);
-    } finally {
+      console.error('Error picking image:', error);
       setUploadingImage(false);
     }
   };

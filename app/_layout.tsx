@@ -103,16 +103,15 @@ function RootLayoutNav() {
       return;
     }
 
-    const inAuthGroup = segments[0] === 'auth';
-    const currentAuthRoute = segments.length > 1 ? segments[1] : null;
+    const inAuthGroup = segments.length > 0 && segments[0] === 'auth';
+    const currentRoute = segments.join('/');
     
     console.log('Auth routing check:', { 
       hasSession: !!session, 
       hasProfile: !!profile, 
       profileSetupComplete: profile?.has_completed_setup,
       inAuthGroup,
-      currentAuthRoute,
-      segments: segments.join('/'),
+      currentRoute,
       isInitialized,
       isLoading
     });
@@ -127,7 +126,7 @@ function RootLayoutNav() {
         // Redirect to home if authenticated and profile is complete
         console.log('Redirecting to home - authenticated with complete profile');
         router.replace('/');
-      } else if (session && profile && !profile.has_completed_setup && currentAuthRoute !== 'profile-setup') {
+      } else if (session && profile && !profile.has_completed_setup && !currentRoute.includes('profile-setup')) {
         console.log('Redirecting to profile setup - incomplete profile');
         router.replace('/auth/profile-setup');
       }

@@ -1,8 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '@/lib/supabase';
-import { Session, User } from '@supabase/supabase-js';
 
 export interface UserProfile {
   id: string;
@@ -14,9 +12,16 @@ export interface UserProfile {
   has_completed_setup?: boolean;
 }
 
+export interface Session {
+  user: {
+    id: string;
+    email: string;
+  };
+  access_token: string;
+}
+
 interface AuthState {
   session: Session | null;
-  user: User | null;
   profile: UserProfile | null;
   isLoading: boolean;
   error: string | null;
@@ -31,11 +36,13 @@ interface AuthState {
   resetError: () => void;
 }
 
+// Mock user database
+const mockUsers = new Map<string, { email: string; password: string; profile?: UserProfile }>();
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       session: null,
-      user: null,
       profile: null,
       isLoading: false,
       error: null,
@@ -48,108 +55,22 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // Get initial session with timeout
-          const { data: { session }, error: sessionError } = await Promise.race([
-            supabase.auth.getSession(),
-            new Promise<any>((_, reject) => 
-              setTimeout(() => reject(new Error('Session timeout')), 8000)
-            )
-          ]);
+          // Simulate initialization delay
+          await new Promise(resolve => setTimeout(resolve, 500));
           
-          if (sessionError) {
-            console.warn('Session error (continuing anyway):', sessionError);
-          }
-          
-          if (session?.user) {
-            console.log('Found existing session for:', session.user.email);
-            
-            // Try to fetch profile with timeout
-            try {
-              const { data: profile, error: profileError } = await Promise.race([
-                supabase
-                  .from('profiles')
-                  .select('*')
-                  .eq('id', session.user.id)
-                  .single(),
-                new Promise<any>((_, reject) => 
-                  setTimeout(() => reject(new Error('Profile timeout')), 5000)
-                )
-              ]);
-              
-              if (profileError && profileError.code !== 'PGRST116') {
-                console.warn('Profile error (using fallback):', profileError);
-              }
-              
-              set({ 
-                session, 
-                user: session.user, 
-                profile: profile || { 
-                  id: session.user.id, 
-                  email: session.user.email || '',
-                  has_completed_setup: false
-                }
-              });
-            } catch (profileError) {
-              console.warn('Profile fetch failed, using fallback:', profileError);
-              set({ 
-                session, 
-                user: session.user, 
-                profile: { 
-                  id: session.user.id, 
-                  email: session.user.email || '',
-                  has_completed_setup: false
-                }
-              });
-            }
+          // Check if we have a stored session
+          const currentState = get();
+          if (currentState.session) {
+            console.log('Found existing session for:', currentState.session.user.email);
+            // Session is already loaded from persistence
           } else {
             console.log('No existing session found');
-            set({ session: null, user: null, profile: null });
           }
-          
-          // Set up auth state listener (but don't wait for it)
-          supabase.auth.onAuthStateChange(async (event, session) => {
-            console.log('Auth state changed:', event, session?.user?.email);
-            
-            if (event === 'SIGNED_IN' && session?.user) {
-              // Fetch profile in background
-              try {
-                const { data: profile } = await supabase
-                  .from('profiles')
-                  .select('*')
-                  .eq('id', session.user.id)
-                  .single();
-                
-                set({ 
-                  session, 
-                  user: session.user, 
-                  profile: profile || { 
-                    id: session.user.id, 
-                    email: session.user.email || '',
-                    has_completed_setup: false
-                  } 
-                });
-              } catch (error) {
-                console.warn('Profile fetch failed in listener:', error);
-                set({ 
-                  session, 
-                  user: session.user, 
-                  profile: { 
-                    id: session.user.id, 
-                    email: session.user.email || '',
-                    has_completed_setup: false
-                  } 
-                });
-              }
-            } else if (event === 'SIGNED_OUT') {
-              set({ session: null, user: null, profile: null });
-            }
-          });
           
           console.log('Auth initialization completed successfully');
         } catch (error: any) {
-          console.warn('Auth initialization failed (continuing anyway):', error);
-          // Don't set error state, just continue with no session
-          set({ session: null, user: null, profile: null });
+          console.warn('Auth initialization failed:', error);
+          set({ session: null, profile: null });
         } finally {
           set({ isLoading: false, isInitialized: true });
         }
@@ -159,16 +80,30 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         
         try {
-          const { data, error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-          });
+          // Simulate API call
+          await new Promise(resolve => setTimeout(resolve, 1000));
           
-          if (error) {
-            throw error;
+          // Check mock users
+          const user = mockUsers.get(email);
+          if (!user || user.password !== password) {
+            throw new Error('Invalid email or password');
           }
           
-          // Session will be handled by the auth listener
+          const session: Session = {
+            user: {
+              id: `user_${Date.now()}`,
+              email: email,
+            },
+            access_token: `token_${Date.now()}`,
+          };
+          
+          const profile: UserProfile = user.profile || {
+            id: session.user.id,
+            email: email,
+            has_completed_setup: false,
+          };
+          
+          set({ session, profile });
           console.log('Sign in successful for:', email);
         } catch (error: any) {
           console.error('Sign in error:', error);
@@ -182,21 +117,33 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         
         try {
-          const { data, error } = await supabase.auth.signUp({
-            email,
-            password,
-          });
+          // Simulate API call
+          await new Promise(resolve => setTimeout(resolve, 1000));
           
-          if (error) {
-            throw error;
+          // Check if user already exists
+          if (mockUsers.has(email)) {
+            throw new Error('User already exists with this email');
           }
           
-          if (data.user && !data.session) {
-            // Email confirmation required
-            set({ error: 'Please check your email to confirm your account' });
-            return;
-          }
+          // Create new user
+          const session: Session = {
+            user: {
+              id: `user_${Date.now()}`,
+              email: email,
+            },
+            access_token: `token_${Date.now()}`,
+          };
           
+          const profile: UserProfile = {
+            id: session.user.id,
+            email: email,
+            has_completed_setup: false,
+          };
+          
+          // Store in mock database
+          mockUsers.set(email, { email, password, profile });
+          
+          set({ session, profile });
           console.log('Sign up successful for:', email);
         } catch (error: any) {
           console.error('Sign up error:', error);
@@ -210,12 +157,10 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         
         try {
-          const { error } = await supabase.auth.signOut();
+          // Simulate API call
+          await new Promise(resolve => setTimeout(resolve, 500));
           
-          if (error) {
-            throw error;
-          }
-          
+          set({ session: null, profile: null });
           console.log('Sign out successful');
         } catch (error: any) {
           console.error('Sign out error:', error);
@@ -229,30 +174,26 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         
         try {
-          const user = get().user;
+          // Simulate API call
+          await new Promise(resolve => setTimeout(resolve, 500));
           
-          if (!user) {
+          const currentState = get();
+          if (!currentState.session) {
             throw new Error('User not authenticated');
           }
           
-          const { error } = await supabase
-            .from('profiles')
-            .upsert({ 
-              id: user.id, 
-              ...updates 
-            });
+          const updatedProfile = { 
+            ...currentState.profile as UserProfile, 
+            ...updates 
+          };
           
-          if (error) {
-            throw error;
+          // Update mock database
+          const user = mockUsers.get(currentState.session.user.email);
+          if (user) {
+            user.profile = updatedProfile;
           }
           
-          set(state => ({ 
-            profile: { 
-              ...state.profile as UserProfile, 
-              ...updates 
-            } 
-          }));
-          
+          set({ profile: updatedProfile });
           console.log('Profile updated successfully');
         } catch (error: any) {
           console.error('Profile update error:', error);
@@ -270,7 +211,6 @@ export const useAuthStore = create<AuthState>()(
       partialize: (state) => ({
         // Only persist essential data, not loading states
         session: state.session,
-        user: state.user,
         profile: state.profile,
       }),
     }
