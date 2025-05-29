@@ -184,6 +184,12 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         
         try {
+          // For now, let's disable Google OAuth to avoid the expo-auth-session issue
+          // and just show an error message
+          throw new Error('Google sign-in is temporarily unavailable. Please use email/password.');
+          
+          /* 
+          // This code is commented out to avoid expo-auth-session issues
           const redirectUrl = Platform.select({
             ios: 'fasthack://auth/callback',
             android: 'fasthack://auth/callback',
@@ -203,6 +209,7 @@ export const useAuthStore = create<AuthState>()(
           }
           
           console.log('Google OAuth initiated');
+          */
         } catch (error: any) {
           console.error('Google sign in error:', error);
           set({ error: error.message || 'Failed to sign in with Google' });

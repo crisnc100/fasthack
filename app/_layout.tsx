@@ -104,7 +104,8 @@ function RootLayoutNav() {
     }
 
     const inAuthGroup = segments[0] === 'auth';
-    const currentAuthRoute = segments.length > 1 ? segments[1] : null;
+    // Fix: Safely access segments[1] and handle the type properly
+    const currentAuthRoute = segments.length > 1 ? segments[1] : undefined;
     
     console.log('Auth routing check:', { 
       hasSession: !!session, 
@@ -128,7 +129,7 @@ function RootLayoutNav() {
         console.log('Redirecting to home - authenticated with complete profile');
         router.replace('/');
       } else if (session && profile && !profile.has_completed_setup && currentAuthRoute !== 'profile-setup') {
-        // Redirect to profile setup if authenticated but profile not complete
+        // Fix: Properly compare with undefined and string
         console.log('Redirecting to profile setup - incomplete profile');
         router.replace('/auth/profile-setup');
       }
