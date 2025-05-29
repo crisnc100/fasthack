@@ -45,128 +45,98 @@ export const useAuthStore = create<AuthState>()(
       initialize: async () => {
         if (get().isInitialized) return;
         
+        console.log('Starting auth initialization...');
         set({ isLoading: true, error: null });
         
         try {
-          // Add timeout to prevent hanging
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Auth initialization timeout')), 10000)
-          );
+          // Get initial session with shorter timeout
+          const { data: { session }, error: sessionError } = await Promise.race([
+            supabase.auth.getSession(),
+            new Promise<any>((_, reject) => 
+              setTimeout(() => reject(new Error('Session timeout')), 5000)
+            )
+          ]);
           
-          const authPromise = supabase.auth.getSession();
-          
-          const { data: { session }, error } = await Promise.race([
-            authPromise,
-            timeoutPromise
-          ]) as any;
-          
-          if (error) {
-            console.error('Session error:', error);
-            // Don't throw here, just log and continue
+          if (sessionError) {
+            console.warn('Session error (continuing anyway):', sessionError);
           }
           
-          if (session) {
-            const { user } = session;
+          if (session?.user) {
+            console.log('Found existing session for:', session.user.email);
             
-            // Fetch user profile with timeout
-            const profilePromise = supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', user.id)
-              .single();
-            
-            const profileTimeoutPromise = new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
-            );
-            
+            // Try to fetch profile with timeout
             try {
               const { data: profile, error: profileError } = await Promise.race([
-                profilePromise,
-                profileTimeoutPromise
-              ]) as any;
+                supabase
+                  .from('profiles')
+                  .select('*')
+                  .eq('id', session.user.id)
+                  .single(),
+                new Promise<any>((_, reject) => 
+                  setTimeout(() => reject(new Error('Profile timeout')), 3000)
+                )
+              ]);
               
               if (profileError && profileError.code !== 'PGRST116') {
-                console.error('Profile error:', profileError);
-                // Don't throw here either, create a basic profile
+                console.warn('Profile error (using fallback):', profileError);
               }
               
               set({ 
                 session, 
-                user, 
+                user: session.user, 
                 profile: profile || { 
-                  id: user.id, 
-                  email: user.email || '',
+                  id: session.user.id, 
+                  email: session.user.email || '',
                   has_completed_setup: false
-                },
-                isInitialized: true
+                }
               });
             } catch (profileError) {
-              console.error('Profile fetch failed:', profileError);
+              console.warn('Profile fetch failed, using fallback:', profileError);
               set({ 
                 session, 
-                user, 
+                user: session.user, 
                 profile: { 
-                  id: user.id, 
-                  email: user.email || '',
+                  id: session.user.id, 
+                  email: session.user.email || '',
                   has_completed_setup: false
-                },
-                isInitialized: true
+                }
               });
             }
           } else {
-            set({ 
-              session: null, 
-              user: null, 
-              profile: null,
-              isInitialized: true
-            });
+            console.log('No existing session found');
+            set({ session: null, user: null, profile: null });
           }
           
-          // Set up auth state listener
+          // Set up auth state listener (but don't wait for it)
           supabase.auth.onAuthStateChange(async (event, session) => {
             console.log('Auth state changed:', event, session?.user?.email);
             
-            if (event === 'SIGNED_IN' && session) {
-              const { user } = session;
-              
-              // Fetch user profile with timeout
+            if (event === 'SIGNED_IN' && session?.user) {
+              // Fetch profile in background
               try {
-                const profilePromise = supabase
+                const { data: profile } = await supabase
                   .from('profiles')
                   .select('*')
-                  .eq('id', user.id)
+                  .eq('id', session.user.id)
                   .single();
-                
-                const profileTimeoutPromise = new Promise((_, reject) => 
-                  setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
-                );
-                
-                const { data: profile, error: profileError } = await Promise.race([
-                  profilePromise,
-                  profileTimeoutPromise
-                ]) as any;
-                
-                if (profileError && profileError.code !== 'PGRST116') {
-                  console.error('Profile fetch error:', profileError);
-                }
                 
                 set({ 
                   session, 
-                  user, 
+                  user: session.user, 
                   profile: profile || { 
-                    id: user.id, 
-                    email: user.email || '',
+                    id: session.user.id, 
+                    email: session.user.email || '',
                     has_completed_setup: false
                   } 
                 });
               } catch (error) {
-                console.error('Profile fetch failed in auth listener:', error);
+                console.warn('Profile fetch failed in listener:', error);
                 set({ 
                   session, 
-                  user, 
+                  user: session.user, 
                   profile: { 
-                    id: user.id, 
-                    email: user.email || '',
+                    id: session.user.id, 
+                    email: session.user.email || '',
                     has_completed_setup: false
                   } 
                 });
@@ -175,14 +145,14 @@ export const useAuthStore = create<AuthState>()(
               set({ session: null, user: null, profile: null });
             }
           });
+          
+          console.log('Auth initialization completed successfully');
         } catch (error: any) {
-          console.error('Auth initialization error:', error);
-          set({ 
-            error: 'Failed to initialize authentication. Please try again.',
-            isInitialized: true 
-          });
+          console.warn('Auth initialization failed (continuing anyway):', error);
+          // Don't set error state, just continue with no session
+          set({ session: null, user: null, profile: null });
         } finally {
-          set({ isLoading: false });
+          set({ isLoading: false, isInitialized: true });
         }
       },
       
@@ -199,44 +169,11 @@ export const useAuthStore = create<AuthState>()(
             throw error;
           }
           
-          const { session, user } = data;
-          
-          // Fetch user profile
-          try {
-            const { data: profile, error: profileError } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', user.id)
-              .single();
-            
-            if (profileError && profileError.code !== 'PGRST116') {
-              console.error('Profile fetch error:', profileError);
-            }
-            
-            set({ 
-              session, 
-              user, 
-              profile: profile || { 
-                id: user.id, 
-                email: user.email || '',
-                has_completed_setup: false
-              } 
-            });
-          } catch (profileError) {
-            console.error('Profile fetch failed:', profileError);
-            set({ 
-              session, 
-              user, 
-              profile: { 
-                id: user.id, 
-                email: user.email || '',
-                has_completed_setup: false
-              } 
-            });
-          }
+          // Session will be handled by the auth listener
+          console.log('Sign in successful for:', email);
         } catch (error: any) {
           console.error('Sign in error:', error);
-          set({ error: error.message });
+          set({ error: error.message || 'Failed to sign in' });
         } finally {
           set({ isLoading: false });
         }
@@ -246,7 +183,7 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         
         try {
-          const { data, error } = await supabase.auth.signInWithOAuth({
+          const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
               redirectTo: 'fasthack://auth/callback',
@@ -257,11 +194,10 @@ export const useAuthStore = create<AuthState>()(
             throw error;
           }
           
-          // Note: The actual session will be handled by the auth listener
-          // after the OAuth redirect completes
+          console.log('Google OAuth initiated');
         } catch (error: any) {
           console.error('Google sign in error:', error);
-          set({ error: error.message });
+          set({ error: error.message || 'Failed to sign in with Google' });
         } finally {
           set({ isLoading: false });
         }
@@ -280,42 +216,16 @@ export const useAuthStore = create<AuthState>()(
             throw error;
           }
           
-          const { session, user } = data;
-          
-          if (user) {
-            // Create initial profile
-            try {
-              const { error: profileError } = await supabase
-                .from('profiles')
-                .insert([
-                  { 
-                    id: user.id, 
-                    email: user.email,
-                    has_completed_setup: false
-                  }
-                ]);
-              
-              if (profileError) {
-                console.error('Profile creation error:', profileError);
-                // Don't throw, just log
-              }
-            } catch (profileError) {
-              console.error('Profile creation failed:', profileError);
-            }
-            
-            set({ 
-              session, 
-              user, 
-              profile: { 
-                id: user.id, 
-                email: user.email || '',
-                has_completed_setup: false
-              } 
-            });
+          if (data.user && !data.session) {
+            // Email confirmation required
+            set({ error: 'Please check your email to confirm your account' });
+            return;
           }
+          
+          console.log('Sign up successful for:', email);
         } catch (error: any) {
           console.error('Sign up error:', error);
-          set({ error: error.message });
+          set({ error: error.message || 'Failed to create account' });
         } finally {
           set({ isLoading: false });
         }
@@ -331,10 +241,10 @@ export const useAuthStore = create<AuthState>()(
             throw error;
           }
           
-          set({ session: null, user: null, profile: null });
+          console.log('Sign out successful');
         } catch (error: any) {
           console.error('Sign out error:', error);
-          set({ error: error.message });
+          set({ error: error.message || 'Failed to sign out' });
         } finally {
           set({ isLoading: false });
         }
@@ -367,9 +277,11 @@ export const useAuthStore = create<AuthState>()(
               ...updates 
             } 
           }));
+          
+          console.log('Profile updated successfully');
         } catch (error: any) {
           console.error('Profile update error:', error);
-          set({ error: error.message });
+          set({ error: error.message || 'Failed to update profile' });
         } finally {
           set({ isLoading: false });
         }
@@ -381,10 +293,10 @@ export const useAuthStore = create<AuthState>()(
       name: 'fasthack-auth-storage',
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
+        // Only persist essential data, not loading states
         session: state.session,
         user: state.user,
         profile: state.profile,
-        isInitialized: state.isInitialized,
       }),
     }
   )

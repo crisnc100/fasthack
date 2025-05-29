@@ -56,6 +56,7 @@ export default function LoginForm() {
     
     try {
       await signInWithGoogle();
+      // Note: OAuth flow will handle the redirect, no need to check session here
     } catch (error: any) {
       console.error('Google sign in error:', error);
     } finally {

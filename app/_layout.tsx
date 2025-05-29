@@ -34,36 +34,36 @@ export default function RootLayout() {
   const [initStarted, setInitStarted] = useState(false);
 
   useEffect(() => {
-    // Initialize auth state with timeout protection
+    // Initialize auth state with better error handling
     if (!initStarted) {
       setInitStarted(true);
+      
       const initAuth = async () => {
         try {
-          await Promise.race([
-            initialize(),
-            new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('Auth init timeout')), 15000)
-            )
-          ]);
+          console.log('Starting auth initialization...');
+          await initialize();
+          console.log('Auth initialization completed');
         } catch (error) {
           console.error('Auth initialization failed:', error);
           // Continue anyway - app should still work without auth
         }
       };
       
+      // Don't block the app startup
       initAuth();
     }
-  }, [initStarted]);
+  }, [initStarted, initialize]);
 
   useEffect(() => {
     if (error) {
-      console.error(error);
+      console.error('Font loading error:', error);
       throw error;
     }
   }, [error]);
 
   useEffect(() => {
     if (loaded) {
+      console.log('Fonts loaded, hiding splash screen');
       SplashScreen.hideAsync();
     }
   }, [loaded]);
@@ -89,38 +89,49 @@ function RootLayoutNav() {
   const segments = useSegments();
   const { session, profile, isLoading, isInitialized } = useAuthStore();
 
-  // Handle auth state changes
+  // Handle auth state changes with better logic
   useEffect(() => {
-    // Wait for auth to be initialized
-    if (!isInitialized) return;
+    // Don't do anything until auth is initialized
+    if (!isInitialized) {
+      console.log('Auth not initialized yet, waiting...');
+      return;
+    }
     
     // Don't redirect while loading
-    if (isLoading) return;
+    if (isLoading) {
+      console.log('Auth still loading, waiting...');
+      return;
+    }
 
     const inAuthGroup = segments[0] === 'auth';
     
-    console.log('Auth state:', { 
+    console.log('Auth routing check:', { 
       hasSession: !!session, 
       hasProfile: !!profile, 
       profileSetupComplete: profile?.has_completed_setup,
       inAuthGroup,
-      segments 
+      segments: segments.join('/'),
+      isInitialized,
+      isLoading
     });
     
-    if (!session && !inAuthGroup) {
-      // Redirect to login if not authenticated
-      console.log('Redirecting to login - no session');
-      router.replace('/auth/login');
-    } else if (session && inAuthGroup && profile?.has_completed_setup) {
-      // Redirect to home if authenticated and profile is complete
-      console.log('Redirecting to home - authenticated with complete profile');
-      router.replace('/');
-    } else if (session && profile && !profile.has_completed_setup && segments[0] !== 'auth') {
-      // Redirect to profile setup if authenticated but profile not complete
-      console.log('Redirecting to profile setup - incomplete profile');
-      router.replace('/auth/profile-setup');
-    }
-  }, [session, profile, segments, isLoading, isInitialized]);
+    // Add a small delay to prevent rapid redirects
+    setTimeout(() => {
+      if (!session && !inAuthGroup) {
+        // Redirect to login if not authenticated
+        console.log('Redirecting to login - no session');
+        router.replace('/auth/login');
+      } else if (session && profile?.has_completed_setup && inAuthGroup) {
+        // Redirect to home if authenticated and profile is complete
+        console.log('Redirecting to home - authenticated with complete profile');
+        router.replace('/');
+      } else if (session && profile && !profile.has_completed_setup && segments[1] !== 'profile-setup') {
+        // Redirect to profile setup if authenticated but profile not complete
+        console.log('Redirecting to profile setup - incomplete profile');
+        router.replace('/auth/profile-setup');
+      }
+    }, 100);
+  }, [session, profile, segments, isLoading, isInitialized, router]);
 
   return (
     <Stack
