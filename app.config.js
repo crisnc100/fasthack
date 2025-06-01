@@ -43,6 +43,10 @@ export default {
     ],
     experiments: {
       typedRoutes: true
+    },
+    extra: {
+      googleClientId: process.env.GOOGLE_CLIENT_ID || "YOUR_GOOGLE_CLIENT_ID",
+      googleRedirectUri: process.env.GOOGLE_REDIRECT_URI || "YOUR_GOOGLE_REDIRECT_URI"
     }
   }
 }

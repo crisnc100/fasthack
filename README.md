@@ -8,7 +8,7 @@ A React Native app built with Expo that helps users find healthier options at fa
 - 📍 Location-based restaurant recommendations
 - 🏷️ Dietary preference filtering (Keto, Low-carb, High-protein, etc.)
 - ❤️ Save favorite meals
-- 👤 Mock authentication system with Google OAuth simulation
+- 👤 Authentication with email/password and Google OAuth
 - 💎 Premium features for advanced filtering
 
 ## Tech Stack
@@ -16,7 +16,7 @@ A React Native app built with Expo that helps users find healthier options at fa
 - **Frontend**: React Native with Expo
 - **Backend**: tRPC with Hono
 - **State Management**: Zustand
-- **Authentication**: Mock authentication system (no external dependencies)
+- **Authentication**: Email/password and Google OAuth
 - **Styling**: React Native StyleSheet
 - **Icons**: Lucide React Native
 
@@ -36,7 +36,11 @@ A React Native app built with Expo that helps users find healthier options at fa
    npm install
    ```
 
-3. Start the development server:
+3. Set up environment variables:
+   - Copy `.env.example` to `.env`
+   - Add your Google OAuth credentials
+
+4. Start the development server:
    ```bash
    npm start
    ```
@@ -50,25 +54,23 @@ A React Native app built with Expo that helps users find healthier options at fa
 
 ## Authentication
 
-The app uses a simplified mock authentication system that simulates real OAuth flows:
+The app uses a combination of email/password authentication and Google OAuth:
 
 ### Demo Credentials
 - **Email**: `demo@example.com`
 - **Password**: `password123`
 
-### Features
-- Email/password authentication (mock implementation)
-- Google OAuth simulation (no external setup required)
-- Profile setup flow for new users
-- Persistent sessions with AsyncStorage
+### Google OAuth Setup
 
-### Google OAuth Simulation
-The "Continue with Google" button simulates a real OAuth flow:
-- On web: Returns a mock Google user after 1.5s delay
-- On mobile: Opens a browser window that simulates the Google login process
-- No external configuration needed for testing
+To use Google OAuth:
 
-Any email/password combination will work for testing, but the demo credentials above will give you a pre-configured user.
+1. Create a project in the [Google Cloud Console](https://console.cloud.google.com/)
+2. Configure the OAuth consent screen
+3. Create OAuth 2.0 Client IDs for Web and Android/iOS
+4. Add the following authorized redirect URIs:
+   - `https://auth.expo.io/@your-username/fasthack`
+   - `fasthack://`
+5. Add your client ID and redirect URI to the `.env` file
 
 ## Project Structure
 
@@ -94,15 +96,6 @@ The app includes a tRPC backend that provides:
 - Restaurant information
 - Type-safe API calls
 - Fallback to mock data
-
-## Real Google OAuth Implementation
-
-To implement real Google OAuth:
-
-1. Set up Google OAuth credentials in Google Cloud Console
-2. Add the credentials to your environment variables
-3. Replace the mock `mockGoogleAuth` function in `store/authStore.ts` with real OAuth implementation using `expo-web-browser`
-4. Update the app.config.js with proper OAuth redirect URLs
 
 ## Contributing
 

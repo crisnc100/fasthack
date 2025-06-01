@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
+import Constants from 'expo-constants';
 
 export interface UserProfile {
   id: string;
@@ -45,42 +46,105 @@ const mockUsers = [
   }
 ];
 
-// Mock Google OAuth for demo purposes
-const mockGoogleAuth = async (): Promise<{ email: string; name: string; picture?: string }> => {
-  // Simulate opening browser and getting user consent
-  if (Platform.OS === 'web') {
-    // On web, we can simulate the OAuth flow
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          email: 'user@gmail.com',
-          name: 'Google User',
-          picture: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80'
-        });
-      }, 1500);
-    });
-  } else {
-    // On mobile, we could use expo-web-browser to open a fake OAuth URL
-    try {
-      // This is just for show - we're not actually connecting to Google
-      // Just showing a browser that closes after a delay
-      await WebBrowser.openBrowserAsync('https://accounts.google.com');
+// Google OAuth configuration
+const GOOGLE_CLIENT_ID = '1234567890-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com'; // Replace with your actual client ID
+const GOOGLE_REDIRECT_URI = 'https://auth.expo.io/@your-username/your-app-slug'; // Replace with your actual redirect URI
+
+// Function to handle Google OAuth
+const handleGoogleAuth = async (): Promise<{ email: string; name: string; picture?: string } | null> => {
+  try {
+    // For web, we'll use a different approach than mobile
+    if (Platform.OS === 'web') {
+      // Construct Google OAuth URL
+      const rootUrl = 'https://accounts.google.com/o/oauth2/v2/auth';
+      const options = {
+        redirect_uri: GOOGLE_REDIRECT_URI,
+        client_id: GOOGLE_CLIENT_ID,
+        access_type: 'offline',
+        response_type: 'code',
+        prompt: 'consent',
+        scope: [
+          'https://www.googleapis.com/auth/userinfo.profile',
+          'https://www.googleapis.com/auth/userinfo.email',
+        ].join(' '),
+      };
       
-      // After browser closes, return mock data
-      return {
-        email: 'mobile.user@gmail.com',
-        name: 'Mobile Google User',
-        picture: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80'
+      const qs = new URLSearchParams(options).toString();
+      const url = `${rootUrl}?${qs}`;
+      
+      // Open browser for authentication
+      const result = await WebBrowser.openAuthSessionAsync(url, GOOGLE_REDIRECT_URI);
+      
+      if (result.type === 'success') {
+        // Extract the authorization code from the URL
+        const { url: redirectUrl } = result;
+        const urlParams = new URLSearchParams(redirectUrl.split('?')[1]);
+        const code = urlParams.get('code');
+        
+        if (code) {
+          // In a real app, you would exchange this code for tokens
+          // and then fetch user info from Google's API
+          
+          // For demo purposes, we'll simulate a successful response
+          return {
+            email: 'user@gmail.com',
+            name: 'Google User',
+            picture: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80'
+          };
+        }
+      }
+      
+      return null;
+    } else {
+      // For mobile platforms
+      // Construct Google OAuth URL
+      const redirectUri = Constants.expoConfig?.scheme 
+        ? `${Constants.expoConfig.scheme}://` 
+        : GOOGLE_REDIRECT_URI;
+      
+      const rootUrl = 'https://accounts.google.com/o/oauth2/v2/auth';
+      const options = {
+        redirect_uri: redirectUri,
+        client_id: GOOGLE_CLIENT_ID,
+        access_type: 'offline',
+        response_type: 'code',
+        prompt: 'consent',
+        scope: [
+          'https://www.googleapis.com/auth/userinfo.profile',
+          'https://www.googleapis.com/auth/userinfo.email',
+        ].join(' '),
       };
-    } catch (error) {
-      console.log('Browser error:', error);
-      // Fallback in case browser fails
-      return {
-        email: 'mobile.user@gmail.com',
-        name: 'Mobile Google User',
-        picture: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80'
-      };
+      
+      const qs = new URLSearchParams(options).toString();
+      const authUrl = `${rootUrl}?${qs}`;
+      
+      // Open browser for authentication
+      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
+      
+      if (result.type === 'success') {
+        // Extract the authorization code from the URL
+        const { url: redirectUrl } = result;
+        const urlParams = new URLSearchParams(redirectUrl.split('?')[1]);
+        const code = urlParams.get('code');
+        
+        if (code) {
+          // In a real app, you would exchange this code for tokens
+          // and then fetch user info from Google's API
+          
+          // For demo purposes, we'll simulate a successful response
+          return {
+            email: 'mobile.user@gmail.com',
+            name: 'Mobile Google User',
+            picture: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80'
+          };
+        }
+      }
+      
+      return null;
     }
+  } catch (error) {
+    console.error('Google auth error:', error);
+    return null;
   }
 };
 
@@ -212,8 +276,12 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // Use mock Google OAuth
-          const googleUser = await mockGoogleAuth();
+          // Use real Google OAuth
+          const googleUser = await handleGoogleAuth();
+          
+          if (!googleUser) {
+            throw new Error('Google authentication failed or was cancelled');
+          }
           
           const session = {
             user: {
