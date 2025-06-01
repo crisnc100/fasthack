@@ -65,7 +65,7 @@ The app uses a simplified mock authentication system that simulates real OAuth f
 ### Google OAuth Simulation
 The "Continue with Google" button simulates a real OAuth flow:
 - On web: Returns a mock Google user after 1.5s delay
-- On mobile: Simulates mobile OAuth flow
+- On mobile: Opens a browser window that simulates the Google login process
 - No external configuration needed for testing
 
 Any email/password combination will work for testing, but the demo credentials above will give you a pre-configured user.

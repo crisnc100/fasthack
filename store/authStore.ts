@@ -60,17 +60,27 @@ const mockGoogleAuth = async (): Promise<{ email: string; name: string; picture?
       }, 1500);
     });
   } else {
-    // On mobile, we could use expo-web-browser to open OAuth URL
-    // For demo purposes, we'll just return mock data
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          email: 'mobile.user@gmail.com',
-          name: 'Mobile Google User',
-          picture: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80'
-        });
-      }, 1500);
-    });
+    // On mobile, we could use expo-web-browser to open a fake OAuth URL
+    try {
+      // This is just for show - we're not actually connecting to Google
+      // Just showing a browser that closes after a delay
+      await WebBrowser.openBrowserAsync('https://accounts.google.com');
+      
+      // After browser closes, return mock data
+      return {
+        email: 'mobile.user@gmail.com',
+        name: 'Mobile Google User',
+        picture: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80'
+      };
+    } catch (error) {
+      console.log('Browser error:', error);
+      // Fallback in case browser fails
+      return {
+        email: 'mobile.user@gmail.com',
+        name: 'Mobile Google User',
+        picture: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80'
+      };
+    }
   }
 };
 
