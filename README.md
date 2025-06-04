@@ -70,7 +70,9 @@ To use Google OAuth:
 4. Add the following authorized redirect URIs:
    - `https://auth.expo.io/@your-username/fasthack`
    - `fasthack://`
-5. Add your client ID and redirect URI to the `.env` file
+5. Add your client ID and redirect URI to the `.env` file as:
+   - `EXPO_PUBLIC_GOOGLE_CLIENT_ID`
+   - `EXPO_PUBLIC_GOOGLE_REDIRECT_URI`
 
 ## Project Structure
 
